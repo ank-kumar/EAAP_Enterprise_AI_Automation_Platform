@@ -2,7 +2,7 @@
 
 A learning platform exploring enterprise AI orchestration, knowledge retrieval, and governed decision-making patterns using the **Enterprise AI Automation Framework (EAAF)**.
 
-## What We Built
+## What I Built
 
 **EAAP** demonstrates how to apply EAAF—a domain-independent reference architecture—to real-world AI-assisted decision systems. It ingests EAAF theory and six reference implementations (AAIT, SCDO, AAMP, FDAB, TANAOP, BMRS) into an Amazon Bedrock Knowledge Base and uses LLM reasoning to design new solutions in any domain.
 
