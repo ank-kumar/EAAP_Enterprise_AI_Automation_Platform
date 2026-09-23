@@ -50,3 +50,18 @@ Six reference implementations instantiate this pattern:
 ## Author
 
 Ank Kumar | AI Labs: AI Solutions
+
+## Screenshots
+
+### Query Mode
+![EAAP Query Mode](docs/screenshots/eaap-query-mode.png)
+
+
+## Reference Architectures
+
+Generated using EAAP Design Mode:
+
+- [Governance Solution](docs/screenshots/EAAP%20—%20Enterprise%20AI%20Automation%20Platform_Governance.pdf)
+- [Healthcare Prescription Refill](docs/screenshots/EAAP%20—%20Enterprise%20AI%20Automation%20Platform_Healtcare_Prescriptio_Refill.pdf)
+- [General](docs/screenshots/EAAP%20—%20Enterprise%20AI%20Automation%20Platform.pdf)
+
