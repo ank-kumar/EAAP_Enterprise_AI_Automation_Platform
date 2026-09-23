@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EAAP — Enterprise AI Automation Platform</title>
+<style>
+  :root{
+    --ink:#0E1118; --panel:#151A24; --panel-2:#1B2130; --line:#242C3B;
+    --text:#E6E9F0; --muted:#8892A6;
+    --retrieval:#E0A33E; --model:#57BCCB; --alert:#E0685F;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    --r:4px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--ink);color:var(--text);font-family:var(--sans)}
+  body{font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 24px 64px}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px;
+         display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  h1{font-size:26px;letter-spacing:-.01em;margin:0;font-weight:650}
+  header .sub{color:var(--muted);font-size:15px;font-weight:600}
+  header .env{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--muted);
+              text-align:right;line-height:1.7;font-weight:600}
+  header .env b{color:var(--text);font-weight:500}
+
+  .grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:20px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+         display:flex;flex-direction:column;min-height:0}
+  .panel > h2{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);
+              padding:12px 16px;border-bottom:1px solid var(--line);font-family:var(--mono)}
+  .panel .body{padding:16px}
+
+  /* mode switch */
+  .modes{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+  .modes button{flex:1;background:var(--ink);color:var(--muted);border:0;padding:9px 10px;
+                font:500 13px/1.2 var(--sans);cursor:pointer}
+  .modes button + button{border-left:1px solid var(--line)}
+  .modes button[aria-pressed="true"]{background:var(--panel-2);color:var(--text);
+                box-shadow:inset 0 -2px 0 var(--model)}
+  .modehint{font-size:12.5px;color:var(--muted);margin:0 0 12px;min-height:2.6em}
+
+  textarea{width:100%;min-height:132px;resize:vertical;background:var(--ink);
+           border:1px solid var(--line);border-radius:var(--r);color:var(--text);
+           padding:12px 13px;font:inherit;line-height:1.5}
+  textarea:focus,button:focus-visible,.chip:focus-visible{outline:2px solid var(--model);outline-offset:2px}
+  .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  button.reset{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:var(--r);padding:9px 14px;font:500 13px/1 var(--sans);cursor:pointer}
+  button.reset:hover{border-color:var(--alert);color:var(--alert)}
+  button.run{background:var(--model);color:#08131A;border:0;border-radius:var(--r);
+             padding:9px 18px;font:600 14px/1 var(--sans);cursor:pointer}
+  button.run:disabled{opacity:.45;cursor:progress}
+  .hint{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .presets{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .presets p{margin:0 0 9px;font-size:12.5px;color:var(--muted)}
+  .chip{display:block;width:100%;text-align:left;background:var(--panel-2);color:var(--text);
+        border:1px solid var(--line);border-radius:var(--r);padding:8px 11px;margin-bottom:7px;
+        font:inherit;font-size:13px;cursor:pointer}
+  .chip:hover{border-color:var(--model)}
+  .chip .tag{font:600 10px/1 var(--mono);color:var(--model);margin-right:6px}
+
+  #answer{min-height:132px;font-size:15.5px;max-width:74ch}
+  #answer .placeholder{color:var(--muted)}
+  #answer h3{font-size:14.5px;margin:18px 0 6px;font-weight:650}
+  #answer h3:first-child{margin-top:0}
+  #answer ul{margin:8px 0;padding-left:20px}
+  #answer li{margin:4px 0}
+  #answer p{margin:0 0 10px}
+  #answer code{font-family:var(--mono);font-size:13px;background:var(--panel-2);
+               padding:1px 5px;border-radius:3px}
+  .caret{display:inline-block;width:7px;height:15px;background:var(--model);
+         vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+  @keyframes blink{50%{opacity:0}}
+  sup.cite{font-family:var(--mono);font-size:10.5px;color:var(--retrieval);
+           border:1px solid var(--retrieval);border-radius:3px;padding:0 3px;margin:0 2px;
+           cursor:pointer;vertical-align:super}
+  .prop{font:600 10px/1 var(--mono);color:var(--model);border:1px solid var(--model);
+        border-radius:3px;padding:1px 4px;margin:0 2px;vertical-align:1px}
+  .legend{font-size:12.5px;color:var(--muted);margin:0 0 14px;padding-bottom:10px;
+          border-bottom:1px solid var(--line)}
+  .sources{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+  .sources h4{margin:0 0 8px;font:600 12px/1 var(--mono);letter-spacing:.06em;color:var(--muted)}
+  .sources ul{margin:0;padding:0}
+  .sources li{font-family:var(--mono);font-size:12.5px;margin:4px 0;list-style:none;word-break:break-all}
+  .sources li span{color:var(--muted)}
+  .error{color:var(--alert);font-family:var(--mono);font-size:13px}
+
+  .trace{margin-top:20px}
+  .rail{display:flex;overflow-x:auto;padding:18px 16px 14px;border-bottom:1px solid var(--line)}
+  .stage{flex:1 1 0;min-width:112px;position:relative;padding-right:14px}
+  .stage:last-child{padding-right:0}
+  .stage .dot{width:9px;height:9px;border-radius:50%;background:var(--line);position:relative;z-index:1}
+  .stage:not(:last-child)::after{content:"";position:absolute;left:9px;right:0;top:4px;
+              height:1px;background:var(--line)}
+  .stage.on .dot{background:var(--retrieval)}
+  .stage.on.gen .dot{background:var(--model)}
+  .stage.live .dot{background:var(--model);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.25}}
+  .stage .nm{font:600 11px/1.35 var(--mono);margin-top:10px;color:var(--muted)}
+  .stage.on .nm,.stage.live .nm{color:var(--text)}
+  .stage .dt{font:400 11px/1.5 var(--mono);color:var(--muted);margin-top:3px}
+  .stage .ms{font:600 12px/1.4 var(--mono);color:var(--retrieval);margin-top:2px}
+  .stage.gen .ms,.stage.live .ms{color:var(--model)}
+
+  .telemetry{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+             border-bottom:1px solid var(--line)}
+  .cell{padding:12px 16px;border-right:1px solid var(--line)}
+  .cell:last-child{border-right:0}
+  .cell .k{font:500 10.5px/1.4 var(--mono);color:var(--muted);letter-spacing:.05em}
+  .cell .v{font:500 13px/1.5 var(--mono);margin-top:3px;word-break:break-all}
+  .cell .v.num{font-size:17px;font-weight:600}
+  .cell .v.wait{color:var(--muted)}
+
+  .chunks{padding:14px 16px}
+  .chunks > h4{margin:0 0 10px;font:600 11px/1 var(--mono);letter-spacing:.06em;color:var(--muted)}
+  .chunk{border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px;background:var(--panel-2)}
+  .chunk.flash{border-color:var(--retrieval)}
+  .chunk summary{list-style:none;cursor:pointer;padding:10px 12px;display:grid;
+                 grid-template-columns:28px minmax(0,1fr) 120px 62px;gap:12px;align-items:center}
+  .chunk summary::-webkit-details-marker{display:none}
+  .chunk .rk{font:600 12px/1 var(--mono);color:var(--retrieval)}
+  .chunk .doc{font-family:var(--mono);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--retrieval)}
+  .chunk .sc{font:600 12px/1 var(--mono);color:var(--muted);text-align:right}
+  .chunk .txt{padding:10px 12px 12px;font-size:13px;color:var(--muted);white-space:pre-wrap;
+              max-height:230px;overflow:auto;border-top:1px solid var(--line);margin:0;max-width:86ch}
+  .chunk .uri{font-family:var(--mono);font-size:11px;color:var(--muted);padding:0 12px 10px;word-break:break-all}
+  #answer pre.code{font:12px/1.35 var(--mono);background:var(--ink);border:1px solid var(--line);
+                   border-radius:var(--r);padding:10px 12px;overflow-x:auto;white-space:pre;margin:10px 0}
+  .design-form{display:none;flex-direction:column;gap:12px;margin-bottom:12px}
+  .design-form.active{display:flex}
+  .df-field label{display:block;font:600 11px/1.4 var(--mono);letter-spacing:.06em;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
+  .df-field input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:var(--r);color:var(--text);padding:9px 12px;font:15px/1.4 var(--sans)}
+  .df-field input:focus{outline:2px solid var(--model);outline-offset:2px}
+  .df-field input::placeholder{color:#4a4d5a}
+  .idle{padding:16px;color:var(--muted);font-family:var(--mono);font-size:12.5px}
+
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+    .chunk summary{grid-template-columns:24px minmax(0,1fr) 56px}
+    .chunk .bar{display:none}
+    header .env{margin-left:0;text-align:left}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .byline{flex-basis:100%;font-size:15px;font-weight:700;color:var(--muted);margin-bottom:-6px}
+  .foot{margin-top:28px;text-align:right;font-size:12.5px;color:var(--muted)}
+  /* outer page: purple; panels keep their dark theme */
+  html,body{background:#4A3A7F}
+  header{border-bottom-color:#6A4DC0}
+  header h1{color:#FFFFFF}
+  header .sub,header .env,.byline,.foot{color:#FFFFFF}
+  header .env b{color:#FFFFFF}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="byline">AI Labs : AI Solutions - Ank Kumar</div>
+    <h1>EAAP</h1>
+    <div class="sub">Enterprise AI Automation Platform</div>
+    <div class="env" id="env">connecting to API…</div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>QUERY</h2>
+      <div class="body">
+        <div class="modes" role="group" aria-label="Answer mode">
+          <button type="button" data-mode="grounded" aria-pressed="true">Answer from documents</button>
+          <button type="button" data-mode="design" aria-pressed="false">Design with the framework</button>
+        </div>
+        <p class="modehint" id="modehint"></p>
+        <div class="design-form" id="design-form">
+          <div class="df-field">
+            <label>Domain</label>
+            <input id="df-domain" type="text" placeholder="e.g. Retail Banking / Healthcare / Supply Chain" autocomplete="off"/>
+          </div>
+          <div class="df-field">
+            <label>Use-Case</label>
+            <input id="df-usecase" type="text" placeholder="describe the specific problem or capability you want to architect" autocomplete="off"/>
+          </div>
+        </div>
+        <textarea id="q" placeholder="Ask about the framework or a solution — or in Design mode, enter your domain name and use case to generate an AI Solution architecture using the Enterprise AI Automation Framework."></textarea>
+        <div class="row">
+          <button class="run" id="run">Run query</button>
+          <button class="reset" id="reset" title="Clear session memory and start fresh">New conversation</button>
+          <span class="hint" id="state">idle</span>
+        </div>
+        <div class="presets">
+          <p>Start from a known question</p>
+          <button class="chip" data-mode="grounded">What are the core stages of the Enterprise AI Automation Framework?</button>
+          <button class="chip" data-mode="grounded">How does AAIT implement AI-augmented incident triage?</button>
+          <button class="chip" data-mode="grounded">What governance controls sit between an AI decision and an automated action?</button>
+          <button class="chip" data-mode="design"><span class="tag">DESIGN</span>Propose an AI Solution architecture using the Enterprise AI Automation Framework.</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>RESPONSE</h2>
+      <div class="body">
+        <p class="legend" id="legend" hidden>
+          <sup class="cite">1</sup> taken from your documents &nbsp;·&nbsp; <span class="prop">proposed</span> Claude's own design reasoning, not in the documents
+        </p>
+        <div id="answer"><div class="placeholder">The answer appears here, with inline citations back to the retrieved passages.</div></div>
+        <div class="sources" id="sources" hidden>
+          <h4>SOURCES</h4>
+          <ul id="srclist"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel trace">
+    <h2>TRACE</h2>
+    <div id="rail" class="rail"></div>
+    <div id="telemetry" class="telemetry"></div>
+    <div id="chunkwrap" class="chunks" hidden>
+      <h4>RETRIEVED CHUNKS</h4>
+      <div id="chunks"></div>
+    </div>
+    <div class="idle" id="traceidle">No run yet. The trace shows routing, retrieval, chunk relevance, model call and latency for each query.</div>
+  </section>
+
+  <footer class="foot">&copy; Ank Kumar, September 2026</footer>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const friendly = id =>
+  id.includes("haiku-4-5") ? "Claude Haiku 4.5 · " :
+  id.includes("sonnet-4-5") ? "Claude Sonnet 4.5 · " : "";
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  $("#env").innerHTML =
+    `Amazon Bedrock Knowledge Base  :&nbsp;&nbsp;&nbsp;<b>${esc(h.knowledge_base_id)}</b> · <b>${esc(h.region)}</b><br>` +
+    `Answer from documents           :&nbsp;&nbsp;&nbsp;<b>${friendly(h.model_id)}</b>${esc(h.model_id)}<br>` +
+    `Design with the framework       :&nbsp;&nbsp;&nbsp;<b>${friendly(h.design_model_id || h.model_id)}</b>${esc(h.design_model_id || h.model_id)}`;
+}).catch(() => { $("#env").textContent = "API unreachable — start uvicorn on port 8000"; });
+
+// ---------- mode ----------
+const HINTS = {
+  grounded: "Answers only from your documents. Every claim is cited to a retrieved passage.",
+  design: "Applies the framework to a new problem or domain. Framework elements are cited; Claude's own proposals are tagged."
+};
+let mode = "grounded";
+function setMode(m){
+  mode = m;
+  document.querySelectorAll(".modes button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  $("#modehint").textContent = HINTS[m];
+  const isDesign = m === "design";
+  $("#design-form").classList.toggle("active", isDesign);
+  $("#q").style.display = isDesign ? "none" : "";
+}
+document.querySelectorAll(".modes button").forEach(b =>
+  b.addEventListener("click", () => setMode(b.dataset.mode)));
+setMode("grounded");
+
+// ---------- answer formatting ----------
+function renderAnswer(md, streaming){
+  const lines = esc(md).split("\n");
+  let out = "", list = false;
+  const inline = t => t
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[proposed\]/gi, '<span class="prop">proposed</span>')
+    .replace(/\[(\d+)\]/g, '<sup class="cite" data-n="$1">$1</sup>');
+  let code = null;
+  for (const raw of lines){
+    const l = raw.trim();
+    if (l.startsWith("```")){
+      if (code === null){ if (list){ out += "</ul>"; list = false; } code = []; }
+      else { out += '<pre class="code">' + code.join("\n") + "</pre>"; code = null; }
+      continue;
+    }
+    if (code !== null){ code.push(raw); continue; }
+    const b = l.match(/^[-*•]\s+(.*)$/);
+    if (b){ if(!list){out += "<ul>"; list = true;} out += "<li>" + inline(b[1]) + "</li>"; continue; }
+    if (list){ out += "</ul>"; list = false; }
+    if (!l || /^-{3,}$/.test(l)) continue;
+    if (/^#{1,6}\s/.test(l)) out += "<h3>" + inline(l.replace(/^#{1,6}\s/, "")) + "</h3>";
+    else if (/^\*\*[^*]+\*\*:?$/.test(l)) out += "<h3>" + inline(l).replace(/<\/?strong>/g,"") + "</h3>";
+    else out += "<p>" + inline(l) + "</p>";
+  }
+  if (code !== null) out += '<pre class="code">' + code.join("\n") + "</pre>";
+  if (list) out += "</ul>";
+  if (streaming) out += '<span class="caret"></span>';
+  return out || '<div class="placeholder">…</div>';
+}
+
+// ---------- trace ----------
+const GEN = new Set(["CLAUDE","GROUNDED RESPONSE"]);
+function stageHTML(name, detail, ms, cls){
+  return `<div class="stage ${cls}"><div class="dot"></div>
+    <div class="nm">${esc(name)}</div>
+    <div class="dt">${esc(String(detail ?? ""))}</div>
+    ${ms ? `<div class="ms">${ms} ms</div>` : ""}</div>`;
+}
+function railRetrieved(d){
+  $("#rail").innerHTML =
+    stageHTML("USER QUERY", d.question_chars + " chars", 0, "on") +
+    stageHTML("KNOWLEDGE ROUTING", d.mode + " · top_k " + d.top_k, 0, "on") +
+    stageHTML("BEDROCK KNOWLEDGE BASE", d.mode === "design" ? "Retrieve x2" : "Retrieve", d.retrieval_ms, "on") +
+    stageHTML("RETRIEVED CHUNKS", d.chunks.length + " passages", 0, "on") +
+    stageHTML("CLAUDE", "ConverseStream", 0, "live gen") +
+    stageHTML("GROUNDED RESPONSE", "streaming", 0, "gen");
+}
+function railDone(stages){
+  $("#rail").innerHTML = stages
+    .map(s => stageHTML(s.name, s.detail, s.ms, "on " + (GEN.has(s.name) ? "gen" : "")))
+    .join("");
+}
+const cell = (k,v,num,wait) =>
+  `<div class="cell"><div class="k">${k}</div><div class="v ${num?"num":""} ${wait?"wait":""}">${esc(String(v))}</div></div>`;
+
+function telemetryPartial(d){
+  $("#telemetry").innerHTML = [
+    cell("MODE", d.mode),
+    cell("TOTAL LATENCY", "streaming…", false, true),
+    cell("RETRIEVAL", d.retrieval_ms + " ms", true),
+    cell("GENERATION", "in progress", false, true),
+    cell("RESPONSE STATUS", "200 streaming"),
+    cell("KNOWLEDGE BASE ID", d.knowledge_base_id),
+    cell("RETRIEVAL OPERATION", d.retrieval_operation + "  top_k=" + d.top_k),
+    cell("MODEL", d.model_id),
+    cell("TOKENS IN / OUT", "–")
+  ].join("");
+}
+function telemetryFinal(t){
+  const tok = t.tokens || {}, lat = t.latency;
+  $("#telemetry").innerHTML = [
+    cell("MODE", t.mode),
+    cell("TOTAL LATENCY", lat.total_ms + " ms", true),
+    cell("TIME TO FIRST TOKEN", (lat.first_token_ms ?? "–") + " ms", true),
+    cell("RETRIEVAL", lat.retrieval_ms + " ms", true),
+    cell("GENERATION", lat.generation_ms + " ms", true),
+    cell("RESPONSE STATUS", t.status),
+    cell("KNOWLEDGE BASE ID", t.knowledge_base_id),
+    cell("RETRIEVAL OPERATION", t.retrieval_operation + "  top_k=" + t.top_k),
+    cell("MODEL", t.model_id),
+    cell("TOKENS IN / OUT", (tok.input ?? "–") + " / " + (tok.output ?? "–")),
+    ...(t.standalone_query ? [cell("REWRITTEN QUERY", t.standalone_query)] : [])
+  ].join("");
+}
+function renderChunks(chunks){
+  const max = Math.max(...chunks.map(c => c.score), 0.0001);
+  $("#chunks").innerHTML = chunks.map(c => `
+    <details class="chunk" id="chunk-${c.rank}">
+      <summary>
+        <span class="rk">[${c.rank}]</span>
+        <span class="doc" title="${esc(c.uri)}">${esc(c.document)}</span>
+        <span class="bar"><i style="width:${Math.round(c.score/max*100)}%"></i></span>
+        <span class="sc">${c.score.toFixed(4)}</span>
+      </summary>
+      <div class="uri">${esc(c.uri)}</div>
+      <div class="txt">${esc(c.text)}</div>
+    </details>`).join("");
+  $("#chunkwrap").hidden = false;
+}
+
+$("#answer").addEventListener("click", e => {
+  const c = e.target.closest("sup.cite"); if (!c) return;
+  const el = document.getElementById("chunk-" + c.dataset.n); if (!el) return;
+  el.open = true; el.classList.add("flash");
+  el.scrollIntoView({behavior:"smooth", block:"center"});
+  setTimeout(() => el.classList.remove("flash"), 1600);
+});
+
+// ---------- streaming run ----------
+async function run(){
+  let question;
+  if (mode === "design") {
+    const domain  = $("#df-domain").value.trim();
+    const usecase = $("#df-usecase").value.trim();
+    if (!domain && !usecase) { $("#df-domain").focus(); return; }
+    const d = domain  || "[domain not specified]";
+    const u = usecase || "[use case not specified]";
+    question = `Propose an AI Solution architecture for the following using the Enterprise AI Automation Framework.\nDomain: ${d}\nUse-Case: ${u}`;
+  } else {
+    question = $("#q").value.trim();
+    if (!question){ $("#q").focus(); return; }
+  }
+  const runMode = mode;
+  const btn = $("#run");
+  btn.disabled = true;
+  $("#state").textContent = runMode === "design" ? "retrieving framework + context…" : "retrieving…";
+  $("#legend").hidden = runMode !== "design";
+  $("#answer").innerHTML = '<div class="placeholder">Retrieving passages…</div>';
+  $("#sources").hidden = true; $("#chunkwrap").hidden = true;
+  $("#rail").innerHTML = ""; $("#telemetry").innerHTML = "";
+  $("#traceidle").hidden = false; $("#traceidle").textContent = "Calling Bedrock…";
+
+  let text = "", painting = false;
+  const paint = () => {
+    if (painting) return;
+    painting = true;
+    requestAnimationFrame(() => { $("#answer").innerHTML = renderAnswer(text, true); painting = false; });
+  };
+
+  const fail = (m, stage, code) => {
+    $("#answer").innerHTML = `<div class="error">${esc(m)}${stage ? " — failed at " + esc(stage) : ""}</div>`;
+    $("#traceidle").hidden = false;
+    $("#traceidle").textContent = code ? ("AWS error code: " + code) : "Pipeline did not complete.";
+    $("#state").textContent = "failed";
+  };
+
+  try{
+    const res = await fetch("/api/query/stream", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({question, mode: runMode})
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+
+    while (true){
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const blocks = buf.split("\n\n");
+      buf = blocks.pop();
+      for (const block of blocks){
+        const ev = (block.match(/^event: (.+)$/m) || [])[1];
+        const dataLine = (block.match(/^data: (.+)$/m) || [])[1];
+        if (!ev || !dataLine) continue;
+        const d = JSON.parse(dataLine);
+
+        if (ev === "error"){ fail(d.error, d.stage, d.code); return; }
+
+        if (ev === "retrieval"){
+          railRetrieved(d); telemetryPartial(d); renderChunks(d.chunks);
+          $("#srclist").innerHTML = d.sources
+            .map(s => `<li>${esc(s.document)} <span>${esc(s.uri)}</span></li>`).join("");
+          $("#sources").hidden = false;
+          $("#traceidle").hidden = true;
+          $("#state").textContent = "generating…";
+          $("#answer").innerHTML = '<div class="placeholder">Claude is reading the passages…</div>';
+        }
+
+        if (ev === "delta"){ text += d.text; paint(); }
+
+        if (ev === "done"){
+          $("#answer").innerHTML = renderAnswer(text, false);
+          railDone(d.trace.stages); telemetryFinal(d.trace); renderChunks(d.trace.chunks);
+          $("#state").textContent = "first text " + (d.trace.latency.retrieval_ms + (d.trace.latency.first_token_ms ?? 0)) +
+            " ms · total " + d.trace.latency.total_ms + " ms";
+        }
+      }
+    }
+  } catch(err){
+    fail(String(err));
+  } finally { btn.disabled = false; }
+}
+
+$("#run").addEventListener("click", run);
+$("#reset").addEventListener("click", async () => {
+  if (!confirm("Clear session memory and start a new conversation?")) return;
+  await fetch("/api/session/reset", {method:"POST"});
+  $("#q").value = "";
+  $("#answer").innerHTML = '<div class="placeholder">Session cleared. Start a new conversation.</div>';
+  $("#sources").hidden = true;
+  $("#chunkwrap").hidden = true;
+  $("#rail").innerHTML = ""; $("#telemetry").innerHTML = "";
+  $("#traceidle").hidden = false;
+  $("#traceidle").textContent = "New session started.";
+  $("#state").textContent = "idle";
+});
+$("#q").addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) run();
+});
+document.querySelectorAll(".chip").forEach(c =>
+  c.addEventListener("click", () => {
+    const m = c.dataset.mode || "grounded";
+    setMode(m);
+    if (m === "design") {
+      $("#df-domain").value = "";
+      $("#df-usecase").value = "";
+      $("#df-domain").focus();
+      $("#state").textContent = "Enter domain and use case, then click Run query";
+    } else {
+      $("#q").value = c.textContent.replace(/^DESIGN/, "").trim();
+      run();
+    }
+  }));
+</script>
+</body>
+</html>
